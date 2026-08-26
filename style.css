@@ -1,0 +1,261 @@
+/* Dark by default: this gets used at night, at 3am, by dust-blind eyes.
+   High contrast, big tap targets, no thin grey-on-grey anything. */
+:root {
+  --bg: #14110e;
+  --panel: #1e1a15;
+  --panel-2: #292420;
+  --line: #3a332c;
+  --ink: #f2ece3;
+  --ink-dim: #a89e90;
+  --playa: #c9a86a;
+  --street: #6d6154;
+  --street-major: #8d7f6d;
+  --accent: #ff8c42;
+  --star: #ffd166;
+  --gps: #4da3ff;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* A canvas is a REPLACED element: `inset: 0` does NOT stretch it, so without
+   explicit width/height it keeps its intrinsic 300x150 and the backing-store
+   assignment in resize() feeds back through the ResizeObserver, doubling the
+   canvas on every pass. Pin the CSS size explicitly. */
+#map {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  touch-action: none; display: block;
+}
+
+/* --- top bar ------------------------------------------------------------ */
+#top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  padding: calc(var(--safe-t) + 8px) 10px 8px;
+  background: linear-gradient(180deg, rgba(20,17,14,.96) 70%, rgba(20,17,14,0));
+}
+#searchrow { display: flex; gap: 8px; align-items: center; }
+#search {
+  flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; /* 16px stops iOS zoom */
+  border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink);
+}
+#search::placeholder { color: var(--ink-dim); }
+.iconbtn {
+  flex: none; width: 42px; height: 42px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  font-size: 19px; line-height: 1; cursor: pointer;
+}
+.iconbtn.on { background: var(--accent); border-color: var(--accent); color: #17120d; }
+
+#days {
+  display: flex; gap: 6px; overflow-x: auto; margin-top: 8px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+#days::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel);
+  color: var(--ink-dim); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #17120d; }
+.chip.today::after { content: " •"; color: var(--accent); }
+.chip.on.today::after { color: #17120d; }
+
+/* --- bottom sheet ------------------------------------------------------- */
+#sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  height: 46vh; display: flex; flex-direction: column;
+  background: var(--panel); border-top: 1px solid var(--line);
+  border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.5);
+  transition: transform .22s ease;
+}
+#sheet.down { transform: translateY(calc(100% - 46px - var(--safe-b))); }
+#grab {
+  flex: none; height: 46px; display: flex; align-items: center; justify-content: center;
+  gap: 10px; cursor: pointer; user-select: none;
+}
+#grab::before {
+  content: ""; width: 38px; height: 4px; border-radius: 2px; background: var(--line);
+}
+#count { color: var(--ink-dim); font-size: 13px; }
+#list {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 0 10px calc(14px + var(--safe-b));
+}
+
+.item {
+  display: flex; gap: 10px; padding: 11px 8px;
+  border-bottom: 1px solid var(--line); cursor: pointer;
+}
+.item:active { background: var(--panel-2); }
+.item.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+.item.now { box-shadow: inset 3px 0 0 var(--gps); }
+.when {
+  flex: none; width: 52px; font-variant-numeric: tabular-nums;
+  font-weight: 700; font-size: 13px; color: var(--accent);
+}
+.item.now .when { color: var(--gps); }
+.body { flex: 1; min-width: 0; }
+.title { font-weight: 600; }
+.meta {
+  color: var(--ink-dim); font-size: 12.5px; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nogeo { color: #c8724a; }
+.star {
+  flex: none; width: 34px; text-align: center; font-size: 17px;
+  color: var(--line); align-self: center;
+}
+.star.on { color: var(--star); }
+.empty { padding: 26px 12px; color: var(--ink-dim); text-align: center; }
+.hint { padding: 10px 12px; color: var(--ink-dim); font-size: 12.5px; }
+
+/* --- detail popup ------------------------------------------------------- */
+#detail {
+  position: fixed; inset: auto 10px calc(10px + var(--safe-b)); z-index: 30;
+  max-height: 62vh; overflow-y: auto; padding: 14px 16px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.6); display: none;
+}
+#detail.show { display: block; }
+#detail h2 { margin: 0 0 4px; font-size: 17px; }
+#detail .addr { color: var(--accent); font-weight: 600; font-size: 14px; }
+#detail .desc { margin-top: 9px; color: var(--ink-dim); font-size: 14px; }
+#detail .times { margin-top: 9px; font-size: 13px; color: var(--ink-dim); }
+#detail .row { display: flex; gap: 8px; margin-top: 13px; }
+#detail button {
+  flex: 1; padding: 10px; border-radius: 9px; font-size: 14px; font-weight: 600;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
+}
+#detail button.primary { background: var(--accent); border-color: var(--accent); color: #17120d; }
+.badge {
+  display: inline-block; margin-top: 6px; padding: 2px 7px; border-radius: 5px;
+  background: var(--panel); border: 1px solid var(--line);
+  font-size: 11px; color: var(--ink-dim);
+}
+
+#toast {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 40;
+  padding: 12px 18px; border-radius: 10px; background: rgba(0,0,0,.86);
+  font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s;
+  max-width: 80vw; text-align: center;
+}
+#toast.show { opacity: 1; }
+
+/* Shown only on --demo builds. Loud on purpose: a demo build must never be
+   mistaken for the real listings while standing in the desert. */
+#demobanner {
+  position: fixed; z-index: 50; left: 0; right: 0; bottom: 46vh;
+  padding: 5px 10px; text-align: center;
+  background: #7a2d12; color: #ffd9c2;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  pointer-events: none;
+}
+
+.sectionhead {
+  padding: 12px 8px 5px; font-size: 11.5px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim);
+  border-bottom: 1px solid var(--line);
+}
+.item.place .when {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-dim);
+}
+
+/* --- testing aids: only present with ?sim= or ?debug= --------------------- */
+#simbanner {
+  position: fixed; z-index: 50; left: 0; right: 0; bottom: 46vh;
+  padding: 5px 10px; text-align: center;
+  background: #6b4405; color: #ffd9a0;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .03em;
+  pointer-events: none;
+}
+#diag {
+  position: fixed; z-index: 45; left: 8px; top: calc(var(--safe-t) + 104px);
+  padding: 8px 10px; border-radius: 8px;
+  background: rgba(10,8,6,.9); border: 1px solid var(--line);
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  max-width: min(88vw, 340px); pointer-events: none;
+}
+#diag div { display: flex; gap: 8px; justify-content: space-between; }
+#diag span { color: var(--ink-dim); }
+#diag b { color: var(--ink); font-weight: 600; text-align: right; word-break: break-word; }
+#diag b.bad { color: #ff8a5c; }
+
+/* Day chips are inert while browsing places — dim them rather than hiding, so
+   the layout does not jump and tapping one is still an obvious way back. */
+#days.muted { opacity: .45; }
+
+/* --- media ---------------------------------------------------------------- */
+.rowthumb {
+  flex: none; width: 46px; height: 46px; object-fit: cover;
+  border-radius: 6px; align-self: center; background: var(--panel-2);
+}
+/* `contain`, not `cover`: these are usually set-times posters and flyers, and
+   cropping one cuts off exactly the part you needed to read. */
+.detailimg {
+  display: block; width: 100%; max-height: 46vh; object-fit: contain;
+  border-radius: 10px; margin-top: 10px; background: var(--panel);
+  cursor: zoom-in;
+}
+
+/* Full-screen viewer — a lineup you cannot read is a lineup you do not have. */
+#lightbox {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  background: rgba(8,6,4,.96); cursor: zoom-out;
+  align-items: center; justify-content: center;
+  padding: calc(var(--safe-t) + 12px) 12px calc(var(--safe-b) + 12px);
+}
+#lightbox.show { display: flex; }
+#lightbox img {
+  max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px;
+}
+#lightbox .close {
+  position: absolute; top: calc(var(--safe-t) + 10px); right: 14px;
+  width: 40px; height: 40px; border-radius: 20px;
+  background: rgba(255,255,255,.14); color: var(--ink);
+  border: none; font-size: 20px; line-height: 1; cursor: pointer;
+}
+
+
+/* Fit-the-city button. Floats over the map rather than joining the top row —
+   a fifth control up there squeezes the search field on a narrow phone.
+   Sits just above the sheet and follows it when the sheet is collapsed. */
+#fitbtn {
+  position: fixed; z-index: 22; right: 10px;
+  bottom: calc(46vh + 12px);
+  width: 42px; height: 42px; border-radius: 21px;
+  border: 1px solid var(--line); background: rgba(30,26,21,.92); color: var(--ink);
+  font-size: 17px; line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,.4);
+  /* Deliberately NOT transitioned. `bottom` here flips between
+     `calc(12px + 46vh)` and `calc(46px + 0px + 12px)`, and the two calc()
+     expressions do not interpolate -- the transition silently holds the start
+     value, so the button never moves at all. The selector matches, the rule
+     applies (an outline on the same rule works), and even `!important` on
+     `bottom` is ignored. Snapping is correct here anyway. */
+}
+#sheet.down ~ #fitbtn { bottom: calc(46px + var(--safe-b) + 12px); }
+#fitbtn:active { background: var(--accent); border-color: var(--accent); color: #17120d; }
+
+/* Shown only when your fix is far outside the city — on the drive in, or while
+   testing at home. Explains why the map did not jump to you. */
+#rangepill {
+  position: fixed; z-index: 23; left: 50%; transform: translateX(-50%);
+  bottom: calc(46vh + 12px);
+  padding: 6px 12px; border-radius: 999px;
+  background: rgba(30,26,21,.94); border: 1px solid var(--line);
+  color: var(--ink); font-size: 12px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,.4); pointer-events: none;
+}
+#sheet.down ~ #rangepill { bottom: calc(46px + var(--safe-b) + 12px); }

@@ -1,0 +1,15 @@
+{
+  "name": "Black Rock City 2026",
+  "short_name": "BRC 2026",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#14110e",
+  "theme_color": "#14110e",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxODAgMTgwJz48cmVjdCB3aWR0aD0nMTgwJyBoZWlnaHQ9JzE4MCcgcng9JzM4JyBmaWxsPScjMTQxMTBlJy8+PGNpcmNsZSBjeD0nOTAnIGN5PSc5MCcgcj0nNjInIGZpbGw9J25vbmUnIHN0cm9rZT0nIzhkN2Y2ZCcgc3Ryb2tlLXdpZHRoPSc3Jy8+PGNpcmNsZSBjeD0nOTAnIGN5PSc5MCcgcj0nNDQnIGZpbGw9J25vbmUnIHN0cm9rZT0nIzZkNjE1NCcgc3Ryb2tlLXdpZHRoPSc1Jy8+PHBhdGggZD0nTTkwIDYyIEwxMDQgMTA0IEg3NiBaJyBmaWxsPScjZmY4YzQyJy8+PGNpcmNsZSBjeD0nOTAnIGN5PSc5MCcgcj0nNicgZmlsbD0nI2ZmZDE2NicvPjwvc3ZnPg==",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ]
+}
