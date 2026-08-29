@@ -185,7 +185,7 @@
     var out = [];
     days.forEach(function (day) {
       day.events.forEach(function (e) {
-        if (!e.c && !isStarred(e)) return;             // not yours
+        if (!isStarred(e)) return;   // yours by default; unstar to drop it
         if (q && (e.t + " " + (e.h || "") + " " + (e.a || "") + " " + (e.k || "") +
                   " " + ((e.ln || []).join(" ")))
                  .toLowerCase().indexOf(q) < 0) return;
@@ -565,7 +565,7 @@
     star.textContent = isStarred(place) ? "★" : "☆";
     star.onclick = function (ev) {
       ev.stopPropagation();
-      toggleStar(starKey(place));
+      toggleStar(place);
       renderList();
       draw();
     };
@@ -614,7 +614,7 @@
     star.textContent = isStarred(e) ? "★" : "☆";
     star.onclick = function (ev) {
       ev.stopPropagation();
-      toggleStar(starKey(e));
+      toggleStar(e);
       renderList();
       draw();
     };
@@ -785,7 +785,7 @@
       star.textContent = isStarred(e) ? "★" : "☆";
       star.onclick = function (ev) {
         ev.stopPropagation();
-        toggleStar(starKey(e));
+        toggleStar(e);
         renderList();
         draw();
       };
@@ -884,7 +884,7 @@
     var starBtn = document.createElement("button");
     starBtn.className = starred ? "primary" : "";
     starBtn.textContent = starred ? "★ Starred" : "☆ Star";
-    starBtn.onclick = function () { toggleStar(starKey(e)); showDetail(e); renderList(); draw(); };
+    starBtn.onclick = function () { toggleStar(e); showDetail(e); renderList(); draw(); };
     var close = document.createElement("button");
     close.textContent = "Close";
     close.onclick = hideDetail;
@@ -923,10 +923,34 @@
   /* Events star per occurrence (`oid`); places have no occurrences and star on
      their own id. One accessor so the two never diverge. */
   function starKey(item) { return item.oid || item.id; }
-  function isStarred(item) { return !!stars[starKey(item)]; }
 
-  function toggleStar(id) {
-    if (stars[id]) delete stars[id]; else stars[id] = 1;
+  /* Anything from your own curated.yaml starts starred: you already said it
+     matters by putting it in the file, and making you star it again on the
+     phone is asking the same question twice.
+
+     So `stars` records DEVIATIONS from the default, not the set of starred
+     things — 1 for starred, 0 for explicitly unstarred, absent for "whatever
+     the default is". That way a set added to curated.yaml next week arrives
+     starred without any migration, and unstarring one still sticks.
+
+     Old saves held only starred keys, which reads correctly under this rule:
+     absent means default. */
+  function isDefaultStarred(item) {
+    return !!(item.c || item.k === "curated");
+  }
+  function isStarred(item) {
+    var stored = stars[starKey(item)];
+    return stored === undefined ? isDefaultStarred(item) : !!stored;
+  }
+
+  function toggleStar(item) {
+    var key = starKey(item);
+    var next = isStarred(item) ? 0 : 1;
+    // An explicit 0 has to be stored, not deleted: deleting would fall back to
+    // the default, which for a curated item is starred -- the toggle would do
+    // nothing and look broken.
+    if (next === (isDefaultStarred(item) ? 1 : 0)) delete stars[key];
+    else stars[key] = next;
     try { localStorage.setItem("brc.stars", JSON.stringify(stars)); } catch (err) {}
   }
   function loadStars() {
