@@ -259,3 +259,9 @@ html, body {
   box-shadow: 0 2px 10px rgba(0,0,0,.4); pointer-events: none;
 }
 #sheet.down ~ #rangepill { bottom: calc(46px + var(--safe-b) + 12px); }
+
+/* Lineups come only from curated.yaml -- the official API never names artists.
+   Coloured like a starred item because that is what it is: something you went
+   and found out yourself. */
+.lineup { color: var(--accent, #e08a3c); font-size: 13px; margin-top: 2px; }
+.lineup.big { font-size: 15px; margin: 6px 0 2px; }

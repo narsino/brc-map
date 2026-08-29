@@ -186,7 +186,8 @@
     days.forEach(function (day) {
       day.events.forEach(function (e) {
         if (!e.c && !isStarred(e)) return;             // not yours
-        if (q && (e.t + " " + (e.h || "") + " " + (e.a || "") + " " + (e.k || ""))
+        if (q && (e.t + " " + (e.h || "") + " " + (e.a || "") + " " + (e.k || "") +
+                  " " + ((e.ln || []).join(" ")))
                  .toLowerCase().indexOf(q) < 0) return;
         out.push({ event: e, dayLabel: day.label });
       });
@@ -509,7 +510,8 @@
     var q = query.trim().toLowerCase();
     return list.filter(function (e) {
       if (!q) return true;
-      return (e.t + " " + (e.h || "") + " " + (e.a || "") + " " + (e.k || "")).toLowerCase().indexOf(q) >= 0;
+      return (e.t + " " + (e.h || "") + " " + (e.a || "") + " " + (e.k || "") +
+              " " + ((e.ln || []).join(" "))).toLowerCase().indexOf(q) >= 0;
     });
   }
 
@@ -596,6 +598,16 @@
       [e.a, e.h, e.k].filter(Boolean).join(" · ");
     body.appendChild(title);
     body.appendChild(meta);
+    /* Who is playing, when you know. The official data never carries this --
+       camps register the party, not the bill -- so it only ever comes from
+       curated.yaml. Given its own line because it is the thing you are
+       actually scanning for at 1 a.m. */
+    if (e.ln && e.ln.length) {
+      var lineup = document.createElement("div");
+      lineup.className = "lineup";
+      lineup.textContent = "♪ " + e.ln.join(" · ");
+      body.appendChild(lineup);
+    }
 
     var star = document.createElement("div");
     star.className = "star" + (isStarred(e) ? " on" : "");
@@ -758,6 +770,15 @@
         [e.a, e.h, e.k].filter(Boolean).join(" · ");
       body.appendChild(title);
       body.appendChild(meta);
+      /* Who is playing. The official data never names artists -- camps register
+         the party, not the bill -- so this only ever comes from curated.yaml.
+         Its own line because it is what you are scanning for at 1 a.m. */
+      if (e.ln && e.ln.length) {
+        var lineup = document.createElement("div");
+        lineup.className = "lineup";
+        lineup.textContent = "♪ " + e.ln.join(" · ");
+        body.appendChild(lineup);
+      }
 
       var star = document.createElement("div");
       star.className = "star" + (isStarred(e) ? " on" : "");
@@ -822,6 +843,13 @@
       times.className = "times";
       times.textContent = e.ad ? "All day" : hhmm(e.s) + (e.e && e.e !== e.s ? " – " + hhmm(e.e) : "");
       detail.appendChild(times);
+    }
+
+    if (e.ln && e.ln.length) {
+      var bill = document.createElement("div");
+      bill.className = "lineup big";
+      bill.textContent = "♪ " + e.ln.join(" · ");
+      detail.appendChild(bill);
     }
 
     /* Stacked rather than a carousel: it is a handful of images, and a swipe
