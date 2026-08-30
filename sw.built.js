@@ -3,7 +3,7 @@
 
    Note the single-file build (brc-YEAR.html) does not need this and does not
    use it -- see docs for why that is the build you should actually carry. */
-var CACHE = "brc-2026-20260830030416";
+var CACHE = "brc-2026-20260830083136";
 var ASSETS = ["./", "./index.html", "./app.js", "./style.css", "./data.js", "./manifest.webmanifest"];
 
 self.addEventListener("install", function (e) {
