@@ -54,6 +54,11 @@
      your things happen. Searching for a place you cannot name is a browse
      problem; finding out what you have on is a time problem. */
   var mode = "events";
+  /* Which day the ★ agenda is narrowed to, or null for the whole week.
+     Separate from `dayIndex` on purpose: narrowing the agenda must not move the
+     day you were looking at in the normal view, or leaving ★ would dump you on
+     a different day than the one you came from. */
+  var agendaDay = null;
   var stars = loadStars();
   var selected = null;                       // currently highlighted item
   var gps = null;                            // {x, y, acc, sim} in local metres
@@ -183,7 +188,8 @@
   function agendaEvents() {
     var q = query.trim().toLowerCase();
     var out = [];
-    days.forEach(function (day) {
+    days.forEach(function (day, i) {
+      if (agendaDay !== null && i !== agendaDay) return;
       day.events.forEach(function (e) {
         if (!isStarred(e)) return;   // yours by default; unstar to drop it
         if (q && (e.t + " " + (e.h || "") + " " + (e.a || "") + " " + (e.k || "") +
@@ -642,13 +648,19 @@
 
   function renderAgenda() {
     var entries = agendaEvents();
+    var scope = agendaDay !== null && days[agendaDay]
+      ? " on " + days[agendaDay].label + " · tap it again for the week"
+      : " this week";
     countEl.textContent = entries.length +
-      (entries.length === 1 ? " thing on" : " things on") + " your list";
+      (entries.length === 1 ? " thing on" : " things on") + " your list" + scope;
     listEl.innerHTML = "";
 
     if (!entries.length) {
       listEl.innerHTML = '<div class="empty">' +
         (query ? "Nothing of yours matches <b>" + escapeHtml(query) + "</b>."
+         : agendaDay !== null
+           ? "Nothing of yours on " + escapeHtml(days[agendaDay].label) +
+             ". Tap the day again for the whole week."
                : "Your list is empty.<br><br>Tap ☆ on any listing to add it, or put it in " +
                  "<code>data/curated.yaml</code> and rebuild.") + "</div>";
       return;
@@ -706,16 +718,25 @@
     el.innerHTML = "";
     days.forEach(function (d, i) {
       var b = document.createElement("button");
-      b.className = "chip" + (i === dayIndex ? " on" : "") + (d.date === today ? " today" : "");
+      /* In ★ the chips narrow the agenda rather than leaving it, so the
+         highlight follows `agendaDay` there and `dayIndex` everywhere else. */
+      var active = mode === "agenda" ? (i === agendaDay) : (i === dayIndex);
+      b.className = "chip" + (active ? " on" : "") + (d.date === today ? " today" : "");
       b.textContent = d.label;
       b.onclick = function () {
-        dayIndex = i;
         selected = null;
-        if (mode !== "events") {          // picking a day means "show me that day"
-          mode = "events";
-          starBtn.classList.remove("on");
-          placesBtn.classList.remove("on");
-          document.getElementById("days").classList.remove("muted");
+        if (mode === "agenda") {
+          // Tapping the active day again widens back out to the whole week --
+          // otherwise there is no way back without leaving ★ and returning.
+          agendaDay = (agendaDay === i) ? null : i;
+        } else {
+          dayIndex = i;
+          if (mode !== "events") {        // picking a day means "show me that day"
+            mode = "events";
+            starBtn.classList.remove("on");
+            placesBtn.classList.remove("on");
+            document.getElementById("days").classList.remove("muted");
+          }
         }
         renderChips();
         renderList();
@@ -1277,7 +1298,8 @@
     starBtn.classList.toggle("on", mode === "agenda");
     placesBtn.classList.toggle("on", mode === "places");
     // Day chips only mean something in the day view.
-    document.getElementById("days").classList.toggle("muted", mode !== "events");
+    // Chips are meaningful in ★ too now, so only the places view mutes them.
+    document.getElementById("days").classList.toggle("muted", mode === "places");
     selected = null;
     hideDetail();
     sheet.classList.remove("down");        // opening a list and hiding it is silly
